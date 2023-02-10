@@ -399,7 +399,7 @@ YOLO::YOLO(std::string engine_file_path)
     assert(context != nullptr);
     delete[] trtModelStream;  // 反序列化模型后，可以删除保存模型的字符串数组
     // TODO 获取输出tensor的维度，这里是在生成网络时的bindings的维度吗，没有看到生成trt模型中有bindings
-
+    // 分配输出tensor的空间
     auto out_dims = engine->getBindingDimensions(1);
     for(int j=0;j<out_dims.nbDims;j++) {
         this->output_size *= out_dims.d[j];
