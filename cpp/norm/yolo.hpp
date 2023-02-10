@@ -373,26 +373,33 @@ YOLO::YOLO(std::string engine_file_path)
 {
     size_t size{0};
     char *trtModelStream{nullptr};
-    
+
+    // 创建输入流并打开模型
     std::ifstream file(engine_file_path, std::ios::binary);
     if (file.good()) {
-        file.seekg(0, file.end);
-        size = file.tellg();
-        file.seekg(0, file.beg);
-        trtModelStream = new char[size];
+        file.seekg(0, file.end);  // 从输入流的末尾，向前移动0个位置。即流移动到末尾位置
+        size = file.tellg();      // 查询流当前位置，即末尾所在位置的字节数，也即读入的模型字节大小
+        file.seekg(0, file.beg);  // 从输入流的开头位置，向前流移皮革位置。即流动到文件开头位置。
+        trtModelStream = new char[size];  // 开辟模型大小的空间，用于保存模型
         assert(trtModelStream);
+        // 读入file流中缓存的模型，将模型存放入trtModelStream字符数组指针中，读入的大小为模型大小字节
         file.read(trtModelStream, size);
         file.close();
     }
     std::cout << "engine init finished" << std::endl;
 
+    // 创建runtime实例
     runtime = createInferRuntime(gLogger);
     assert(runtime != nullptr);
+    // 反序列化模型，得到engine实例
     engine = runtime->deserializeCudaEngine(trtModelStream, size);
-    assert(engine != nullptr); 
+    assert(engine != nullptr);
+    // 创建上下文
     context = engine->createExecutionContext();
     assert(context != nullptr);
-    delete[] trtModelStream;
+    delete[] trtModelStream;  // 反序列化模型后，可以删除保存模型的字符串数组
+    // TODO 获取输出tensor的维度，这里是在生成网络时的bindings的维度吗，没有看到生成trt模型中有bindings
+
     auto out_dims = engine->getBindingDimensions(1);
     for(int j=0;j<out_dims.nbDims;j++) {
         this->output_size *= out_dims.d[j];
