@@ -347,25 +347,47 @@ static void draw_objects(const cv::Mat& bgr, const std::vector<Object>& objects,
 
 class YOLO
 {
-    public:
-        YOLO(std::string engine_file_path);
-        virtual ~YOLO();
-        void detect_img(std::string image_path);
-        void detect_video(std::string video_path);
-        cv::Mat static_resize(cv::Mat& img);
-        float* blobFromImage(cv::Mat& img);
-        void doInference(IExecutionContext& context, float* input, float* output, const int output_size, cv::Size input_shape);
+//    public:
+//        YOLO(std::string engine_file_path);
+//        virtual ~YOLO();
+//        void detect_img(std::string image_path);
+//        void detect_video(std::string video_path);
+//        cv::Mat static_resize(cv::Mat& img);
+//        float* blobFromImage(cv::Mat& img);
+//        void doInference(IExecutionContext& context, float* input, float* output, const int output_size, cv::Size input_shape);
+//
+//    private:
+//        static const int INPUT_W = 640;
+//        static const int INPUT_H = 640;
+//        const char* INPUT_BLOB_NAME = "image_arrays";
+//        const char* OUTPUT_BLOB_NAME = "outputs";
+//        float* prob;
+//        int output_size = 1;
+//        ICudaEngine* engine;
+//        IRuntime* runtime;
+//        IExecutionContext* context;
 
-    private:
-        static const int INPUT_W = 640;
-        static const int INPUT_H = 640;
-        const char* INPUT_BLOB_NAME = "image_arrays";
-        const char* OUTPUT_BLOB_NAME = "outputs";
-        float* prob;
-        int output_size = 1;
-        ICudaEngine* engine;
-        IRuntime* runtime;
-        IExecutionContext* context;
+public:
+    YOLO(std::string engine_file_path);
+    virtual ~YOLO();  // 虚析构函数的作用？？
+    void detect_img(std::string image_path);
+    void detect_video(std::string video_path);
+    cv::Mat statice_resize(cv::Mat& img);  // 引用传参数？？和指针传参的区别？
+    float* blobFromImage(cv::Mat& img);    // 归一化操作？还做了rbg -> bgr?
+    // IExecutionContext ?? cv::Size ??
+    void doInference(IExecutionContext& context, flot* input, float* output, const int output_size, cv::Size input_shape);
+
+private:
+    // 静态变量的作用？？ const不同位置不同含义？
+    static const int INPUT_W = 640;
+    static const int INPUT_H = 640;
+    const char* INPUT_BLOB_NAME = "image_arrarys";
+    const char* OUTPUT_BLOB_NAME = "outputs";
+    float* prob;
+    int output_size = 1;
+    ICudaEngine* engine; // ICudaEngine ??
+    IRuntime* runtime;   // IRuntime ??
+    IExecutionContext* context; //IExecutionContext??
 
 };
 
