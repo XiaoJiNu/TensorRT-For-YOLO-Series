@@ -369,25 +369,25 @@ class YOLO
 
 public:
     YOLO(std::string engine_file_path);
-    virtual ~YOLO();  // 虚析构函数的作用？？
+    virtual ~YOLO();  // 虚析构函数的作用？？没有虚函数的类是不是不应该用虚析构函数？
     void detect_img(std::string image_path);
     void detect_video(std::string video_path);
     cv::Mat statice_resize(cv::Mat& img);  // 引用传参数？？和指针传参的区别？
     float* blobFromImage(cv::Mat& img);    // 归一化操作？还做了rbg -> bgr?
     // IExecutionContext ?? cv::Size ??
-    void doInference(IExecutionContext& context, flot* input, float* output, const int output_size, cv::Size input_shape);
+    void doInference(IExecutionContext& context, float* input, float* output, const int output_size, cv::Size input_shape);
 
 private:
     // 静态变量的作用？？ const不同位置不同含义？
     static const int INPUT_W = 640;
     static const int INPUT_H = 640;
-    const char* INPUT_BLOB_NAME = "image_arrarys";
-    const char* OUTPUT_BLOB_NAME = "outputs";
+    const char* INPUT_BLOB_NAME = "image_arrarys";  // 指针INPUT_BLOB_NAME指向的字符是不可变的(即常量字符)
+    const char* OUTPUT_BLOB_NAME = "outputs";       // 指针OUTPUT_BLOB_NAME指向的字符是不可变的
     float* prob;
     int output_size = 1;
-    ICudaEngine* engine; // ICudaEngine ??
-    IRuntime* runtime;   // IRuntime ??
-    IExecutionContext* context; //IExecutionContext??
+    IRuntime* runtime;   // IRuntime ??  运行实例
+    ICudaEngine* engine; // ICudaEngine ??  engine
+    IExecutionContext* context; //IExecutionContext??  上下文，管理中间激活的额外状态
 
 };
 
