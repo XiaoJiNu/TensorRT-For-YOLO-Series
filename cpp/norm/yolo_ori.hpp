@@ -372,7 +372,7 @@ public:
     virtual ~YOLO();  // 虚析构函数的作用？？没有虚函数的类是不是不应该用虚析构函数？
     void detect_img(std::string image_path);
     void detect_video(std::string video_path);
-    cv::Mat statice_resize(cv::Mat& img);  // 引用传参数？？和指针传参的区别？
+    cv::Mat static_resize(cv::Mat& img);  // 引用传参数？？和指针传参的区别？
     float* blobFromImage(cv::Mat& img);    // 归一化操作？还做了rbg -> bgr?
     // IExecutionContext ?? cv::Size ??
     void doInference(IExecutionContext& context, float* input, float* output, const int output_size, cv::Size input_shape);

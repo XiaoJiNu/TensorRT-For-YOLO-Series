@@ -344,6 +344,11 @@ static void draw_objects(const cv::Mat& bgr, const std::vector<Object>& objects,
     /* cv::waitKey(0); */
 }
 
+static void show_img(cv::Mat pr_img) {
+    cv::namedWindow("pr_img");
+    cv::imshow("pr_img", pr_img);
+    cv::waitKey(0);
+}
 
 class YOLO
 {
@@ -445,38 +450,106 @@ YOLO::~YOLO()
 
 void YOLO::detect_img(std::string image_path)
 {
+//    // 1. 读入图片并resize
+//    cv::Mat img = cv::imread(image_path);
+//    int img_w = img.cols;
+//    int img_h = img.rows;
+//    // 623x618 -> 640x640，img为引用传参
+//    cv::Mat pr_img = this->static_resize(img);  // ??
+////    cv::namedWindow("pr_img");
+////    cv::imshow("pr_img", pr_img);
+////    cv::waitKey(0);
+//    std::cout << "blob image" << std::endl;
+//
+//    // 2. 归一化 ？？
+//    float* blob;
+//    blob = blobFromImage(pr_img);  // 只是归一化操作？？, pr_img为引用传参
+//    float scale = std::min(this->INPUT_W / (img.cols*1.0), this->INPUT_H / (img.rows*1.0));
+//
+//    // run inference
+//    // 3. 推理图片
+//    auto start = std::chrono::system_clock::now();
+//    // 为什么context可以直接被调用，pro用this->prob调用？？
+//    // 为什么context为引用传参？？ input,output用指针传参？？
+//    // ** doInference中，模型输出结果保存在指针prob中，所以后续decode时直接调用prob即可，没有直接返回模型推理结果
+//    doInference(*context, blob, this->prob, output_size, pr_img.size());
+//    auto end = std::chrono::system_clock::now();
+//    std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
+//
+//    // 4. decode 模型输出的所有结果框
+//    std::vector<Object> objects;
+//    decode_outputs(this->prob, this->output_size, objects, scale, img_w, img_h);
+//    draw_objects(img, objects, image_path);
+//    delete blob;
+
+    // 1. 读入图片并resize
     cv::Mat img = cv::imread(image_path);
-    int img_w = img.cols;
-    int img_h = img.rows;
-    cv::Mat pr_img = this->static_resize(img);
+    int img_w = img.rows;
+    int img_h = img.cols;
+    // img的维度变化是怎样？？
+    cv::Mat pr_img = static_resize(img);
     std::cout << "blob image" << std::endl;
 
+    // 2. 归一化 ？？
     float* blob;
     blob = blobFromImage(pr_img);
+    // scale用于干什么
     float scale = std::min(this->INPUT_W / (img.cols*1.0), this->INPUT_H / (img.rows*1.0));
 
-    // run inference
+    // 3. 推理图片
+    // chrono是一个time library
     auto start = std::chrono::system_clock::now();
     doInference(*context, blob, this->prob, output_size, pr_img.size());
     auto end = std::chrono::system_clock::now();
-    std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl;
+    std::cout << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "ms" << std::endl ;
+    int temp = 0;
 
+    // 4. decode 模型输出的所有结果框
     std::vector<Object> objects;
     decode_outputs(this->prob, this->output_size, objects, scale, img_w, img_h);
-    draw_objects(img, objects, image_path);
-    delete blob;
-
 }
 
 cv::Mat YOLO::static_resize(cv::Mat& img) {
-    float r = std::min(this->INPUT_W / (img.cols*1.0), INPUT_H / (img.rows*1.0));
+//    float r = std::min(this->INPUT_W / (img.cols*1.0), INPUT_H / (img.rows*1.0));
+//    int unpad_w = r * img.cols;
+//    int unpad_h = r * img.rows;
+//    // re是按照图像比例resize到640尺度，其中宽高对应缩放比例小的那边刚好到640,另一边按照比例r进行resize。此时图像还没有填充到640×640
+//    cv::Mat re(unpad_h, unpad_w, CV_8UC3);  // re: hxw = 640x634
+//    cv::resize(img, re, re.size());
+//    // 生成一个640*640的灰度图片，用于将得到得按照比例缩放后的图片放进这个灰度图片
+//    cv::Mat out(this->INPUT_W, this->INPUT_H, CV_8UC3, cv::Scalar(114, 114, 114));
+//    // src.copyTo(dst)和src.clone(dst)效果相同，都是深拷贝。只是当src没有分配内存时候，copyTo为src分配内存，如果有，则不分配内存。
+//    // 但是clone一定是会为src重新分配内存。clone是先重新分配内存，再调用copyTo
+//    // https://blog.csdn.net/yangshengwei230612/article/details/102758136?spm=1001.2101.3001.6650.2&utm_medium=distribute.pc_relevant.none-task-blog-2%7Edefault%7ECTRLIST%7ERate-2-102758136-blog-70154719.pc_relevant_aa&depth_1-utm_source=distribute.pc_relevant.none-task-blog-2%7Edefault%7ECTRLIST%7ERate-2-102758136-blog-70154719.pc_relevant_aa&utm_relevant_index=5
+//    re.copyTo(out(cv::Rect(0, 0, re.cols, re.rows)));
+//
+//    // 测试改变copyTo得到的dst会不会改变src
+//    // 经过下面的代码确认，src.copyTo(dst)为深拷贝，只是比clone快
+//    for (size_t i = 0; i < 3; ++i) {
+//        for (size_t h = 0; h < out.rows; ++h) {
+//            for (size_t w = 0; w < out.cols; ++w) {
+//                out.at<cv::Vec3b>(h, w)[i] = 0;
+//            }
+//        }
+//    }
+//    show_img(out);
+//
+//    return out;
+
+    // 1. 将图片得长边缩放为640,短边按照比例缩放，保持长宽比例不变
+    // 得到所放比例小得那条边的缩放比例为r.这条边按照r缩放为640，而另一条边按照r所放小于等于640
+    float r = std::min(this->INPUT_H / img.rows, this->INPUT_W / img.cols);
     int unpad_w = r * img.cols;
     int unpad_h = r * img.rows;
     cv::Mat re(unpad_h, unpad_w, CV_8UC3);
-    cv::resize(img, re, re.size());
-    cv::Mat out(this->INPUT_W, this->INPUT_H, CV_8UC3, cv::Scalar(114, 114, 114));
+    cv::resize(img, re, re.size()); // re.size() ??
+
+    // 2. 生成一个640*640的Mat数组out，用于存放缩放后得图片
+    cv::Mat out(this->INPUT_H, this->INPUT_W, CV_8UC3, cv::Scalar(114, 114, 114));
+    // 3. 将图片放到out数组中，这里是将re数组复制到out的ROI区域
+    // cv::Rect() ?? out(cv::Rect(0, 0, re.cols, re.rows))是提取out数组得左上角坐标(0,0)，宽高为w,h的区域
     re.copyTo(out(cv::Rect(0, 0, re.cols, re.rows)));
-    return out;
+
 }
 
 float* YOLO::blobFromImage(cv::Mat& img){
