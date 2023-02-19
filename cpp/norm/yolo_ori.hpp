@@ -372,7 +372,7 @@ public:
     virtual ~YOLO();  // 虚析构函数的作用？？没有虚函数的类是不是不应该用虚析构函数？
     void detect_img(std::string image_path);
     void detect_video(std::string video_path);
-    cv::Mat static_resize(cv::Mat& img);  // 引用传参数？？和指针传参的区别？
+    cv::Mat statice_resize(cv::Mat& img);  // 引用传参数？？和指针传参的区别？
     float* blobFromImage(cv::Mat& img);    // 归一化操作？还做了rbg -> bgr?
     // IExecutionContext ?? cv::Size ??
     void doInference(IExecutionContext& context, float* input, float* output, const int output_size, cv::Size input_shape);
@@ -393,14 +393,10 @@ private:
 
 YOLO::YOLO(std::string engine_file_path)
 {
-    // 读入模型，保存在字符串中 -> 然后生成runtime -> 反序列化模型得到engine -> 生成执行上下文
-    // -> 开辟保存输出tensor的float数组空间 -> 删除保存模型的字符串数组
     size_t size{0};
-    // 字符串指针。cout << trtModelStream为输出整个字符串，cout << *trtModelStream 输出该字符串得第一个字符
-    // 参考 https://blog.csdn.net/Kallou/article/details/123239999#:~:text=C%2B%2B%E5%A4%84%E7%90%86%E5%AD%97%E7%AC%A6%E4%B8%B2%E6%9C%89%E4%B8%A4%E7%A7%8D%E6%96%B9%E5%BC%8F%EF%BC%8C%E5%8D%B3%EF%BC%9A%20%E6%8C%87%E9%92%88%E6%96%B9%E5%BC%8F%E5%92%8C%E6%95%B0%E7%BB%84%E6%96%B9%E5%BC%8F%20%E6%95%B0%E7%BB%84%E6%96%B9%E5%BC%8F%EF%BC%9Achar%20a%20%5B%5D%20%3D,%22HelloWorld%22%3B%20%E6%8C%87%E9%92%88%E6%96%B9%E5%BC%8F%EF%BC%9Aconst%20char%2A%20s%20%3D%20%22HelloWorld%22%3B%20const%E5%8F%AF%E4%BB%A5%E5%BF%BD%E7%95%A5
     char *trtModelStream{nullptr};
 
-    // 创建输入流并打开模型，然后将模型输入流存入字符指针中
+    // 创建输入流并打开模型
     std::ifstream file(engine_file_path, std::ios::binary);
     if (file.good()) {
         file.seekg(0, file.end);  // 从输入流的末尾，向前移动0个位置。即流移动到末尾位置
@@ -417,7 +413,7 @@ YOLO::YOLO(std::string engine_file_path)
     // 创建runtime实例
     runtime = createInferRuntime(gLogger);
     assert(runtime != nullptr);
-    // 反序列化模型，得到engine实例。这里没有用*trtModelStream，因为*trtModelStream表示取字符串第一个字符
+    // 反序列化模型，得到engine实例
     engine = runtime->deserializeCudaEngine(trtModelStream, size);
     assert(engine != nullptr);
     // 创建上下文
@@ -428,10 +424,9 @@ YOLO::YOLO(std::string engine_file_path)
     // 分配输出tensor的空间
     auto out_dims = engine->getBindingDimensions(1);
     for(int j=0;j<out_dims.nbDims;j++) {
-        // 这里得到输出tensor 维度1x8400x85的乘积，用于分配输出空间大小
         this->output_size *= out_dims.d[j];
     }
-    this->prob = new float[this->output_size];  // 开辟用于保存输出tensor的空间
+    this->prob = new float[this->output_size];
 }
 
 YOLO::~YOLO()
