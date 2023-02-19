@@ -583,6 +583,7 @@ void YOLO::doInference(IExecutionContext& context, float* input, float* output, 
 
     // In order to bind the buffers, we need to know the names of the input and output tensors.
     // Note that indices are guaranteed to be less than IEngine::getNbBindings()
+    // INPUT_BLOB_NAME什么是否绑定到模型的？？ getBindingIndex实现什么功能??
     const int inputIndex = engine.getBindingIndex(INPUT_BLOB_NAME);
 
     assert(engine.getBindingDataType(inputIndex) == nvinfer1::DataType::kFLOAT);
@@ -591,16 +592,22 @@ void YOLO::doInference(IExecutionContext& context, float* input, float* output, 
     int mBatchSize = engine.getMaxBatchSize();
 
     // Create GPU buffers on device
+    // 在gpu上分配用于存储输入、输出tensor的空间，并让buffers的两个指针变量指向它们
+    // &buffers[inputIndex]中的&实现什么功能？？
     CHECK(cudaMalloc(&buffers[inputIndex], 3 * input_shape.height * input_shape.width * sizeof(float)));
     CHECK(cudaMalloc(&buffers[outputIndex], output_size*sizeof(float)));
 
     // Create stream
+    // 创建流。流实现的功能是什么？？
     cudaStream_t stream;
     CHECK(cudaStreamCreate(&stream));
 
+    // 将输入tensor复制到gpu上，这里为什么传入流？？
     // DMA input batch data to device, infer on the batch asynchronously, and DMA output back to host
     CHECK(cudaMemcpyAsync(buffers[inputIndex], input, 3 * input_shape.height * input_shape.width * sizeof(float), cudaMemcpyHostToDevice, stream));
+    // 推理模型
     context.enqueue(1, buffers, stream, nullptr);
+    // 将模型输出tensor从gpu复制到cpu
     CHECK(cudaMemcpyAsync(output, buffers[outputIndex], output_size * sizeof(float), cudaMemcpyDeviceToHost, stream));
     cudaStreamSynchronize(stream);
 
