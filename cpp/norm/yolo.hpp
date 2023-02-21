@@ -574,44 +574,51 @@ float* YOLO::blobFromImage(cv::Mat& img){
 }
 
 void YOLO::doInference(IExecutionContext& context, float* input, float* output, const int output_size, cv::Size input_shape) {
+    // 获取关联的引擎.这里engine为引用别名，并且为常量，不能更改
     const ICudaEngine& engine = context.getEngine();
 
     // Pointers to input and output device buffers to pass to engine.
+    // 实现功能：创建一个指针，它指向device上的输入、输出缓冲区，并将传递给engine
     // Engine requires exactly IEngine::getNbBindings() number of buffers.
+    // Engine 需要的缓冲区数量必须和Engine::getNbBindings()得到得数量一致
     assert(engine.getNbBindings() == 2);
-    void* buffers[2];
+    void* buffers[2];  // 用于存放输入输出缓冲区
 
     // In order to bind the buffers, we need to know the names of the input and output tensors.
+    // 为了绑定缓冲区，我们需要知道输入、输出tensor的名字
     // Note that indices are guaranteed to be less than IEngine::getNbBindings()
-    // INPUT_BLOB_NAME什么是否绑定到模型的？？ getBindingIndex实现什么功能??
-    const int inputIndex = engine.getBindingIndex(INPUT_BLOB_NAME);
-
+    // 必须确保索引数量要小于IEngine::getNbBindings()得到的值
+    // INPUT_BLOB_NAME什么时候绑定到模型的？？
+    // getBindingIndex实现什么功能??
+    // 答：Retrieve the binding index for a named tensor.给定一个tensor名字获取它在binding缓冲区的索引
+    const int inputIndex = engine.getBindingIndex(INPUT_BLOB_NAME);  // 得到输入tensor在binding缓冲区的索引
+    // getBindingDataType(inputIndex)，确认输入tensor的数据类型是否为32位浮点数
     assert(engine.getBindingDataType(inputIndex) == nvinfer1::DataType::kFLOAT);
     const int outputIndex = engine.getBindingIndex(OUTPUT_BLOB_NAME);
     assert(engine.getBindingDataType(outputIndex) == nvinfer1::DataType::kFLOAT);
     int mBatchSize = engine.getMaxBatchSize();
 
     // Create GPU buffers on device
-    // 在gpu上分配用于存储输入、输出tensor的空间，并让buffers的两个指针变量指向它们
+    // 在gpu上分配用于存储输入、输出tensor的缓冲区，并让buffers的两个指针变量指向它们
     // &buffers[inputIndex]中的&实现什么功能？？
     CHECK(cudaMalloc(&buffers[inputIndex], 3 * input_shape.height * input_shape.width * sizeof(float)));
     CHECK(cudaMalloc(&buffers[outputIndex], output_size*sizeof(float)));
 
     // Create stream
-    // 创建流。流实现的功能是什么？？
+    // 创建异步流。流实现的功能是什么？？
     cudaStream_t stream;
     CHECK(cudaStreamCreate(&stream));
 
-    // 将输入tensor复制到gpu上，这里为什么传入流？？
+    // 将输入tensor复制到gpu上的缓冲区，这里为什么传入流？？
     // DMA input batch data to device, infer on the batch asynchronously, and DMA output back to host
     CHECK(cudaMemcpyAsync(buffers[inputIndex], input, 3 * input_shape.height * input_shape.width * sizeof(float), cudaMemcpyHostToDevice, stream));
     // 推理模型
     context.enqueue(1, buffers, stream, nullptr);
-    // 将模型输出tensor从gpu复制到cpu
+    // 将模型输出tensor从gpu复制到cpu缓冲区
     CHECK(cudaMemcpyAsync(output, buffers[outputIndex], output_size * sizeof(float), cudaMemcpyDeviceToHost, stream));
-    cudaStreamSynchronize(stream);
+    cudaStreamSynchronize(stream); // 等待流任务结束
 
-    // Release stream and buffers
+    // Release stream and buffers，释放流和输入输出缓冲区
     cudaStreamDestroy(stream);
     CHECK(cudaFree(buffers[inputIndex]));
     CHECK(cudaFree(buffers[outputIndex]));
