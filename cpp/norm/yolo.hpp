@@ -112,10 +112,10 @@ static void nms_sorted_bboxes(const std::vector<Object> &faceobjects, std::vecto
 
 static void
 generate_yolo_proposals(float *feat_blob, int output_size, float prob_threshold, std::vector<Object> &objects) {
-    const int num_class = 80;
-    auto dets = output_size / (num_class + 5);
-    for (int boxs_idx = 0; boxs_idx < dets; boxs_idx++) {
-        const int basic_pos = boxs_idx * (num_class + 5);
+    const int num_class = 80;   // 给定类别数量
+    auto dets = output_size / (num_class + 5);  // 得到fpn输出的所有anchor数量
+    for (int boxs_idx = 0; boxs_idx < dets; boxs_idx++) {  // 遍历每个anchor的结果
+        const int basic_pos = boxs_idx * (num_class + 5);  // 得到当前anchor的第一个预测值的索引
         float x_center = feat_blob[basic_pos + 0];
         float y_center = feat_blob[basic_pos + 1];
         float w = feat_blob[basic_pos + 2];
@@ -124,6 +124,8 @@ generate_yolo_proposals(float *feat_blob, int output_size, float prob_threshold,
         float y0 = y_center - h * 0.5f;
         float box_objectness = feat_blob[basic_pos + 4];
         // std::cout<<*feat_blob<<std::endl;
+        // 这里得到的遍历每个类别的得分，有可能一个anchor得到多个目标。应该取
+        // feat_blob[basic_pos + 5: basic_pos + 5 + num_class]的最大值类别作为该目标的类别
         for (int class_idx = 0; class_idx < num_class; class_idx++) {
             float box_cls_score = feat_blob[basic_pos + 5 + class_idx];
             float box_prob = box_objectness * box_cls_score;
@@ -155,12 +157,11 @@ static void decode_outputs(float *prob, int output_size, std::vector<Object> &ob
     std::vector<int> picked;
     nms_sorted_bboxes(proposals, picked, NMS_THRESH);
 
-
     int count = picked.size();
 
     std::cout << "num of boxes: " << count << std::endl;
 
-    objects.resize(count);
+    objects.resize(count);  // 调整容器的大小，使其包含n个元素
     for (int i = 0; i < count; i++) {
         objects[i] = proposals[picked[i]];
 
