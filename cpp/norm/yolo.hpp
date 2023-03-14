@@ -34,39 +34,64 @@ struct Object {
     float prob;
 };
 
-static void qsort_descent_inplace(std::vector<Object> &faceobjects, int left, int right) {
+//static void qsort_descent_inplace(std::vector<Object> &faceobjects, int left, int right) {
+//    int i = left;
+//    int j = right;
+//    float p = faceobjects[(left + right) / 2].prob;
+//
+//    while (i <= j) {
+//        while (faceobjects[i].prob > p)
+//            i++;
+//
+//        while (faceobjects[j].prob < p)
+//            j--;
+//
+//        if (i <= j) {
+//            // swap
+//            std::swap(faceobjects[i], faceobjects[j]);
+//
+//            i++;
+//            j--;
+//        }
+//    }
+//
+//#pragma omp parallel sections
+//    {
+//#pragma omp section
+//        {
+//            if (left < j) qsort_descent_inplace(faceobjects, left, j);
+//        }
+//#pragma omp section
+//        {
+//            if (i < right) qsort_descent_inplace(faceobjects, i, right);
+//        }
+//    }
+//}
+
+// http://data.biancheng.net/view/117.html
+// https://www.cnblogs.com/MOBIN/p/4681369.html
+
+// 1. 静态函数的作用？
+static void qsort_descent_inplace(std::vector<Object>& faceobjects, int left, int right) {
     int i = left;
     int j = right;
-    float p = faceobjects[(left + right) / 2].prob;
+    float p = faceobjects[(left + right) / 2].prob;  // 提取中间元素的置信度
 
     while (i <= j) {
         while (faceobjects[i].prob > p)
             i++;
-
         while (faceobjects[j].prob < p)
             j--;
 
-        if (i <= j) {
-            // swap
+        if (i<=j)
             std::swap(faceobjects[i], faceobjects[j]);
-
-            i++;
-            j--;
-        }
     }
 
-#pragma omp parallel sections
-    {
-#pragma omp section
-        {
-            if (left < j) qsort_descent_inplace(faceobjects, left, j);
-        }
-#pragma omp section
-        {
-            if (i < right) qsort_descent_inplace(faceobjects, i, right);
-        }
-    }
+    if (left < j) qsort_descent_inplace(faceobjects, left, j);
+    if (i < right) qsort_descent_inplace(faceobjects, i, right);
+
 }
+
 
 static inline float intersection_area(const Object &a, const Object &b) {
     cv::Rect_<float> inter = a.rect & b.rect;
@@ -110,8 +135,7 @@ static void nms_sorted_bboxes(const std::vector<Object> &faceobjects, std::vecto
     }
 }
 
-static void
-generate_yolo_proposals(float *feat_blob, int output_size, float prob_threshold, std::vector<Object> &objects) {
+static void generate_yolo_proposals(float *feat_blob, int output_size, float prob_threshold, std::vector<Object> &objects) {
     const int num_class = 80;   // 给定类别数量
     auto dets = output_size / (num_class + 5);  // 得到fpn输出的所有anchor数量
     for (int boxs_idx = 0; boxs_idx < dets; boxs_idx++) {  // 遍历每个anchor的结果
