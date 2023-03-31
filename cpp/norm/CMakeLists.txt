@@ -16,8 +16,13 @@ include_directories(${PROJECT_SOURCE_DIR}/include)
 #include_directories(/usr/local/cuda/include)
 #link_directories(/usr/local/cuda/lib64)
 
-include_directories(/usr/local/cuda-11.1/include)
-link_directories(/usr/local/cuda-11.1//lib64)
+# dell-xps8490 cuda path
+# include_directories(/usr/local/cuda-11.1/include)
+# link_directories(/usr/local/cuda-11.1//lib64)
+
+# paddle 2.4.2-gpu-cuda11.2-cudnn8.2-trt8.0
+include_directories(/usr/local/cuda-11.2/include)
+link_directories(/usr/local/cuda-11.2//lib64)
 
 #
 # tensorrt
@@ -28,8 +33,12 @@ link_directories(/usr/local/cuda-11.1//lib64)
 # tensorRT
 # Add the given directories to those the compiler uses to search for include files.
 # Relative paths are interpreted as relative to the current source directory
-# 将给定目录添加到编译器搜索头文件的路径中
-include_directories(/home/yr/software/TensorRT-8.4.1.5.Linux.x86_64-gnu.cuda-11.6.cudnn8.4/TensorRT-8.4.1.5/include/)
+
+# dell-xps8490 cuda path, 将给定目录添加到编译器搜索头文件的路径中
+# include_directories(/home/yr/software/TensorRT-8.4.1.5.Linux.x86_64-gnu.cuda-11.6.cudnn8.4/TensorRT-8.4.1.5/include/)
+# paddle 2.4.2-gpu-cuda11.2-cudnn8.2-trt8.0 path
+include_directories(/usr/local/TensorRT-8.0.3.4/include)
+
 # ----- link_directories解释 -----
 # Add directories in which the linker will look for libraries
 # 添加⾮标准的共享库搜索路径，链接器会在其中搜索非标准的共享库
@@ -37,8 +46,11 @@ include_directories(/home/yr/software/TensorRT-8.4.1.5.Linux.x86_64-gnu.cuda-11.
 # LINK_DIRECTORIES(/home/myproject/libs)，把该路径添加到第三方库搜索路径中，***这样就可以使用相对路径了***，
 # 使用TARGET_LINK_LIBRARIES的时候，只需要给出动态链接库的名字就行了。
 # 也可以set(LINK_DIR /Users/haoran/Downloads/wfdb/lib)，LINK_DIRECTORIES({LINK_DIR})
-# 官方不建议使用该命令，取而代之的为find_package()  find_library()
-link_directories(/home/yr/software/TensorRT-8.4.1.5.Linux.x86_64-gnu.cuda-11.6.cudnn8.4/TensorRT-8.4.1.5/lib/)
+# 官方不建议使用该命令，取而代之的为find_package()  find_library(), dell-xps8490 cuda path
+# link_directories(/home/yr/software/TensorRT-8.4.1.5.Linux.x86_64-gnu.cuda-11.6.cudnn8.4/TensorRT-8.4.1.5/lib/)
+# paddle 2.4.2-gpu-cuda11.2-cudnn8.2-trt8.0 path
+link_directories(/usr/local/TensorRT-8.0.3.4/lib)
+
 
 
 

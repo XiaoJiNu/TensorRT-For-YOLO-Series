@@ -7,7 +7,7 @@
 #include <opencv2/opencv.hpp>
 #include <dirent.h>
 #include "NvInfer.h"
-#include "cuda_runtime_api.h"
+// #include "cuda_runtime_api.h"
 #include "logging.h"
 
 #define CHECK(status) \
@@ -94,6 +94,9 @@ static void qsort_descent_inplace(std::vector<Object>& faceobjects, int left, in
 
 
 static inline float intersection_area(const Object &a, const Object &b) {
+    // The expression "a.rect & b.rect" calculates the intersection of the two rectangles
+    // represented by the "rect" member variables of objects "a" and "b". The resulting
+    // rectangle is stored in the "inter" variable of type "cv::Rect_<float>".
     cv::Rect_<float> inter = a.rect & b.rect;
     return inter.area();
 }
@@ -105,35 +108,79 @@ static void qsort_descent_inplace(std::vector<Object> &objects) {
     qsort_descent_inplace(objects, 0, objects.size() - 1);
 }
 
-static void nms_sorted_bboxes(const std::vector<Object> &faceobjects, std::vector<int> &picked, float nms_threshold) {
-    picked.clear();
+//static void nms_sorted_bboxes(const std::vector<Object> &faceobjects, std::vector<int> &picked, float nms_threshold) {
+//    picked.clear();  // 清空元素，用于存储NMS后的box在候选框中的索引
+//
+//    const int n = faceobjects.size();  // 得到用于NMS的候选框的数量
+//
+//    // 计算每个方框的面积
+//    std::vector<float> areas(n);
+//    for (int i = 0; i < n; i++) {
+//        areas[i] = faceobjects[i].rect.area();
+//    }
+//
+//    // 遍历每个候选框
+//    for (int i = 0; i < n; i++) {
+//        // a是一个引用变量，它的类型是一个Object常量类型，即它指向的元素不能改变
+//        const Object &a = faceobjects[i];
+//
+//        int keep = 1;  // keep用于表示box_i是否需要过滤。keep=1表示不过滤
+//
+//        // 遍历已经挑选出来的box，如果发现挑选出来的box中，存在和box_i的iou大于阈值，则box_i需要过滤
+//        for (int j = 0; j < (int) picked.size(); j++) {
+//            const Object &b = faceobjects[picked[j]];
+//
+//            // 如果box_j和box_i的iou大于阈值，过滤掉box_i，令keep=0
+//            // intersection over union
+//            float inter_area = intersection_area(a, b);
+//            float union_area = areas[i] + areas[picked[j]] - inter_area;
+//            // float IoU = inter_area / union_area
+//            if (inter_area / union_area > nms_threshold)
+//                keep = 0;
+//        }
+//
+//        if (keep)  // 如果box_i没有被过滤掉，将它添加到挑选出来的vector中
+//            picked.push_back(i);
+//    }
+//}
 
+
+static void nms_sorted_bboxes(const std::vector<Object>& faceobjects,  std::vector<int>& picked, float nms_threshold) {
+    // const std::vector<Object>& faceobjects, 这里的const有什么用 ??
+    picked.clear();
     const int n = faceobjects.size();
 
+    // 计算每个候选框box面积
     std::vector<float> areas(n);
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < n; ++i) {
         areas[i] = faceobjects[i].rect.area();
     }
 
-    for (int i = 0; i < n; i++) {
-        const Object &a = faceobjects[i];
+    // 遍历候选框，挑选iou没有超过阈值的box
+    for (int i = 0; i < n; ++i) {
+        const Object& a = faceobjects[i];  // 为什么要引用
 
+        // 遍历已经筛选出来的box，看是否和box_i的iou大于阈值
         int keep = 1;
-        for (int j = 0; j < (int) picked.size(); j++) {
-            const Object &b = faceobjects[picked[j]];
+        for (int j = 0; j < (int)picked.size(); ++j) {
+            const Object& b = faceobjects[picked[j]];
 
-            // intersection over union
+            // 求交集
             float inter_area = intersection_area(a, b);
             float union_area = areas[i] + areas[picked[j]] - inter_area;
-            // float IoU = inter_area / union_area
+            // 判断是否iou是否超过阈值
             if (inter_area / union_area > nms_threshold)
                 keep = 0;
+                // 这里可以提前结束对i的判断
         }
 
         if (keep)
-            picked.push_back(i);
+            picked.emplace_back(i);
+
     }
+
 }
+
 
 static void generate_yolo_proposals(float *feat_blob, int output_size, float prob_threshold, std::vector<Object> &objects) {
     const int num_class = 80;   // 给定类别数量
@@ -172,12 +219,16 @@ static void generate_yolo_proposals(float *feat_blob, int output_size, float pro
 
 static void decode_outputs(float *prob, int output_size, std::vector<Object> &objects, float scale, const int img_w,
                            const int img_h) {
+
+    // 1. 筛选预测类别得分阈值大于一定值的anchor
     std::vector<Object> proposals;
     generate_yolo_proposals(prob, output_size, BBOX_CONF_THRESH, proposals);
     std::cout << "num of boxes before nms: " << proposals.size() << std::endl;
 
+    // 2. 对挑选出来的anchor，按照得分从大到小排序
     qsort_descent_inplace(proposals);
 
+    // 3. NMS过滤掉, picked存储了NMS后剩下的box在候选框中的索引
     std::vector<int> picked;
     nms_sorted_bboxes(proposals, picked, NMS_THRESH);
 
@@ -185,6 +236,7 @@ static void decode_outputs(float *prob, int output_size, std::vector<Object> &ob
 
     std::cout << "num of boxes: " << count << std::endl;
 
+    // 4. 将box放大到原图尺度上
     objects.resize(count);  // 调整容器的大小，使其包含n个元素
     for (int i = 0; i < count; i++) {
         objects[i] = proposals[picked[i]];
@@ -504,7 +556,7 @@ void YOLO::detect_img(std::string image_path) {
     // 2. 归一化 ？？
     float *blob;
     blob = blobFromImage(pr_img);
-    // scale用于干什么
+    // scale用于干什么?? 用于后续将检测结果放大到原图尺寸
     float scale = std::min(this->INPUT_W / (img.cols * 1.0), this->INPUT_H / (img.rows * 1.0));
 
     // 3. 推理图片
